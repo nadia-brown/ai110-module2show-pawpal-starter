@@ -44,15 +44,32 @@ pip install -r requirements.txt
 
 ## 🖥️ Sample Output
 
-Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
+```
+============================================================
+Today's Schedule for Nadia - Tuesday, October 20, 2026
+============================================================
+07:00 - 07:20  Feather wand play (Miso) [medium]
+               Why: medium priority
+07:30 - 07:40  Breakfast (Biscuit) [high]
+               Why: high priority; fixed at 07:30
+07:30 - 07:40  Breakfast (Miso) [high]
+               Why: high priority; fixed at 07:30; done alongside Biscuit's breakfast
+09:00 - 09:15  Brushing (Biscuit) [low]
+               Why: low priority; must happen between 09:00 and 10:00
+12:00 - 12:05  Thyroid meds (Miso) [high]
+               Why: high priority; fixed at 12:00
+17:00 - 17:45  Walk (Biscuit) [high]
+               Why: high priority; matches preference: Biscuit likes evening walks
+```
+## Implementation Summary 
 
-```
-# e.g.:
-# Daily plan for Biscuit (Golden Retriever):
-#   08:00 — Morning walk (30 min) [priority: high]
-#   09:00 — Feeding (10 min) [priority: high]
-#   ...
-```
+An Owner can register one or more Pet objects. An Owner can also customize Preference objects to control scheduling.
+
+A Pet maintains a list of Task objects. These Tasks can include a TimeConstarint object that defines when activities should occur. 
+
+The scheduler collets taks from the owner and determines which tasks need to be completed and when they can be scheduled and creates a DailyPlan. 
+
+
 
 ## 🧪 Testing PawPal+
 

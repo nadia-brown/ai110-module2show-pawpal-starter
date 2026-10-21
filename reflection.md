@@ -7,11 +7,26 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
+The classes I created are Scheduler, Owner, DailyPlan, Preference, ScheduledTask, Preference, Pet, Task, Priority, and TimeConstraint
+
+The Owner class is responsible for add and remove a pet, get a pet by name, add preferences and get all tasks. 
+
+The Pet class is responsible for adding and removing taks, and getting all tasks. 
+
+The Tasks class is responsible for marking a task comlete, it can display whether the task has a time constraint, and assign a task a priority score.  
+
+The Scheduler class is responible for generating the daily plan, sorting tasks, filtering tasks, finding tasks by time, and determining if there are conflicts. 
+
+The DailyPlan class is responsible for adding task items, and displaying tasks. 
+
+
 **b. Design changes**
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
+Yes there are logic issues. A fixed taks can be moved off it's fixed time. 
+ 
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
@@ -40,6 +55,11 @@
 - Describe one moment where you did not accept an AI suggestion as-is.
 - How did you evaluate or verify what the AI suggested?
 
+Claude Code suggested adding an additional class called SkippedTasks for all the tasks that were skipped in the daily plan.
+
+ I determined addind a seperate class to track tasks that could not be scheduled would introduce unnecessary complexity and potentially errors into this project. 
+
+I rejectd Claude Code's design after evaluating whether an additional class was necessary for the current requirements and decided not to include it. 
 ---
 
 ## 4. Testing and Verification

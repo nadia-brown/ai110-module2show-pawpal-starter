@@ -10,6 +10,22 @@ classDiagram
         HIGH
     }
 
+    class TaskCategory {
+        <<enumeration>>
+        WALK
+        FEEDING
+        MEDS
+        GROOMING
+        ENRICHMENT
+        OTHER
+    }
+
+    class Frequency {
+        <<enumeration>>
+        DAILY
+        WEEKLY
+    }
+
     class Owner {
         +str name
         +int available_minutes
@@ -21,7 +37,7 @@ classDiagram
         +remove_pet(pet_name: str) None
         +get_pet(pet_name: str) Pet
         +add_preference(pref: Preference) None
-        +get_all_tasks() list~Task~
+        +get_all_tasks() list~tuple~Pet, Task~~
     }
 
     class Pet {
@@ -39,10 +55,16 @@ classDiagram
         +int duration_minutes
         +Priority priority
         +TimeConstraint time_constraint
-        +str preference
-        +bool completed
-        +mark_complete() None
+        +TaskCategory category
+        +Frequency frequency
+        +int weekday
+        +bool shareable
+        +set~date~ completed_dates
+        +mark_complete(on: date) None
+        +is_complete_on(day: date) bool
+        +is_due_on(day: date) bool
         +has_time_constraint() bool
+        +is_fixed() bool
         +priority_score() int
     }
 
@@ -57,22 +79,27 @@ classDiagram
         +str description
         +str preferred_time_of_day
         +int weight
-        +applies_to(task: Task) bool
+        +list~TaskCategory~ categories
+        +str pet_name
+        +applies_to(task: Task, pet: Pet) bool
+        +window() tuple~int, int~
     }
 
     class Scheduler {
         +Owner owner
+        +date plan_date
         +generate_plan() DailyPlan
-        +sort_tasks(tasks: list~Task~) list~Task~
-        +filter_tasks(tasks: list~Task~) list~Task~
-        +find_slot(task: Task, plan: DailyPlan) time
+        +score_task(task: Task, pet: Pet) int
+        +sort_tasks(tasks: list~tuple~Pet, Task~~) list~tuple~Pet, Task~~
+        +filter_tasks(tasks: list~tuple~Pet, Task~~) list~tuple~Pet, Task~~
+        +find_slot(task: Task, pet: Pet, plan: DailyPlan) time
         +detect_conflicts(plan: DailyPlan) list~str~
     }
 
     class DailyPlan {
-        +date date
+        +date plan_date
         +list~ScheduledTask~ items
-        +list~Task~ skipped_tasks
+        +list~tuple~Task, Pet, str~~ skipped_tasks
         +add_item(item: ScheduledTask) None
         +total_minutes() int
         +view_tasks() list~ScheduledTask~
@@ -86,13 +113,18 @@ classDiagram
         +time end_time
         +str reason
         +overlaps(other: ScheduledTask) bool
+        +can_share_time_with(task: Task, pet: Pet) bool
     }
 
     Owner "1" *-- "0..*" Pet : owns
     Owner "1" o-- "0..*" Preference : has
     Pet "1" *-- "0..*" Task : needs
     Task --> Priority : uses
+    Task --> TaskCategory : is a
+    Task --> Frequency : repeats
     Task "1" o-- "0..1" TimeConstraint : limited by
+    Preference --> TaskCategory : matches
+    Preference ..> Pet : optionally for
     Scheduler --> Owner : reads pets & preferences
     Scheduler ..> DailyPlan : creates
     Scheduler ..> Preference : applies
