@@ -96,19 +96,42 @@ Scheduler.complete_tasks(pet, task, on): Marks a task as complete.
 
 ## 🧪 Testing PawPal+
 
+### Test Coverage 
+1. Pet and Task Management 
+2. Scheduling and Prioritization 
+3. Chronological Ordering 
+4. Recurring Tasks 
+5. Conflict Detection 
+
+### Examplese of Specific Tests: 
+test_mark_complete_changes_task_status(): confirms that marking a test complete updates it's status.  
+
+test_shared_tasks_count_once_so_high_priority_task_fits(): verifies that added scheduled preference changes when an activity is scheduled. 
+
+test_same_pet_clash_warns_instead_of_crashing(): Checks for conflicting activities and produces a warning instead of causing the application to crash. 
+
 ```bash
 # Run the full test suite:
-pytest
+python -m pytest
 
 # Run with coverage:
 pytest --cov
 ```
 
-Sample test output:
 
 ```
-# Paste your pytest output here
+========================== test session starts ==========================
+platform darwin -- Python 3.9.1, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/nadia/CodePath/PawPal/
+collected 27 items                                                      
+
+tests/test_pawpal.py ...........................                  [100%]
+
+========================== 27 passed in 0.09s ===========================
 ```
+
+### Confidence Level 
+My confidence in my system based on the system's reliability based on test results is 5 out of 5 stars. 
 
 ## 📐 Smarter Scheduling
 

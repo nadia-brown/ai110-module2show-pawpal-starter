@@ -27,7 +27,7 @@ def test_add_task_increases_pet_task_count():
 from datetime import time
 
 from pawpal_system import (
-    Owner, Preference, Priority, ScheduledTask, Scheduler, TaskCategory, TimeConstraint,
+    DailyPlan, Owner, Preference, Priority, ScheduledTask, Scheduler, TaskCategory, TimeConstraint,
 )
 
 DAY = date(2026, 10, 20)
@@ -138,6 +138,47 @@ def test_sort_by_time_orders_by_start_then_end():
     assert [i.task.title for i in result] == ["Breakfast", "Walk", "Dinner"]
 
 
+def test_generated_plan_is_chronological_regardless_of_insertion_order():
+    dog, cat = Pet("Biscuit", "dog", 3), Pet("Miso", "cat", 5)
+    dog.add_task(fixed("Dinner", 18))
+    cat.add_task(Task("Play", 20, Priority.LOW))
+    dog.add_task(Task("Walk", 30, Priority.HIGH, TimeConstraint(time(9, 0), time(11, 0))))
+    cat.add_task(fixed("Breakfast", 7, 30))
+    dog.add_task(Task("Brushing", 15))
+
+    scheduler = Scheduler(make_owner(180, dog, cat), DAY)
+    items = scheduler.generate_plan().view_tasks()
+
+    assert len(items) == 5
+    assert [(i.start_min, i.end_min) for i in items] == sorted((i.start_min, i.end_min) for i in items)
+    assert all(a.end_min <= b.start_min for a, b in zip(items, items[1:]))  # nothing shareable
+    assert scheduler.sort_by_time(items) == items
+
+
+def test_add_item_keeps_plan_chronological_and_ties_in_insertion_order():
+    dog = Pet("Biscuit", "dog", 3)
+    plan = DailyPlan(DAY)
+    for title, hour in [("Dinner", 18), ("Breakfast", 8), ("Lunch", 12), ("Meds", 8)]:
+        plan.add_item(ScheduledTask(Task(title, 10), dog, time(hour), time(hour, 10)))
+
+    assert [i.task.title for i in plan.view_tasks()] == ["Breakfast", "Meds", "Lunch", "Dinner"]
+
+
+def test_sort_by_time_returns_new_list_and_handles_empty():
+    dog = Pet("Biscuit", "dog", 3)
+    scheduler = Scheduler(make_owner(60, dog), DAY)
+    items = [
+        ScheduledTask(Task("Dinner", 10), dog, time(18, 0), time(18, 10)),
+        ScheduledTask(Task("Breakfast", 10), dog, time(8, 0), time(8, 10)),
+    ]
+
+    result = scheduler.sort_by_time(items)
+
+    assert [i.task.title for i in result] == ["Breakfast", "Dinner"]
+    assert [i.task.title for i in items] == ["Dinner", "Breakfast"]  # input untouched
+    assert scheduler.sort_by_time([]) == []
+
+
 # --- Recurring tasks ---------------------------------------------------------
 
 from datetime import timedelta
@@ -230,6 +271,32 @@ def test_missed_instance_carries_forward_until_done():
     assert [i.task for i in next_day.items] == [upcoming]
 
 
+def test_daily_recurrence_rolls_over_month_and_year():
+    dog = Pet("Biscuit", "dog", 3)
+    walk = Task("Walk", 30)
+    dog.add_task(walk)
+    new_years_eve = date(2026, 12, 31)
+
+    upcoming = Scheduler(make_owner(60, dog), new_years_eve).complete_task(dog, walk)
+
+    assert upcoming.due_date == date(2027, 1, 1)
+
+
+def test_completing_each_daily_instance_keeps_exactly_one_due_per_day():
+    dog = Pet("Biscuit", "dog", 3)
+    dog.add_task(Task("Walk", 30))
+    owner = make_owner(60, dog)
+
+    for offset in range(3):
+        day = DAY + timedelta(days=offset)
+        scheduler = Scheduler(owner, day)
+        [item] = scheduler.generate_plan().items  # exactly one walk due today
+        upcoming = scheduler.complete_task(dog, item.task)
+        assert upcoming.due_date == day + timedelta(days=1)
+
+    assert sorted(t.due_date for t in dog.get_tasks()) == [DAY + timedelta(days=n) for n in range(4)]
+
+
 # --- Conflict detection ------------------------------------------------------
 
 def fixed(title, hour, minute=0, duration=10, priority=Priority.MEDIUM, shareable=False):
@@ -273,3 +340,54 @@ def test_no_warning_for_shareable_flexible_or_back_to_back_tasks():
 
     assert plan.warnings == []
     assert len(plan.items) == 4
+
+
+def test_identical_fixed_times_for_different_pets_are_flagged():
+    dog, cat = Pet("Biscuit", "dog", 3), Pet("Miso", "cat", 5)
+    dog.add_task(fixed("Dinner", 18))
+    cat.add_task(fixed("Dinner", 18))
+
+    plan = Scheduler(make_owner(60, dog, cat), DAY).generate_plan()
+
+    assert plan.warnings == [
+        "Time conflict: 'Dinner' (Biscuit, 18:00-18:10) overlaps 'Dinner' (Miso, 18:00-18:10); "
+        "only one can be scheduled"
+    ]
+    assert scheduled(plan) == [("Biscuit", "Dinner")]
+    assert [(t.title, p.name) for t, p, _ in plan.skipped_tasks] == [("Dinner", "Miso")]
+
+
+def test_shareable_tasks_at_same_time_for_same_pet_are_still_flagged():
+    dog = Pet("Biscuit", "dog", 3)
+    dog.add_task(fixed("Breakfast", 7, 30, shareable=True))
+    dog.add_task(fixed("Meds", 7, 30, shareable=True))
+
+    plan = Scheduler(make_owner(60, dog), DAY).generate_plan()
+
+    assert len(plan.warnings) == 1
+    assert len(plan.items) == 1
+
+
+def test_three_tasks_at_same_time_flag_every_pair():
+    cat = Pet("Miso", "cat", 5)
+    for title in ("Meds", "Nail trim", "Brushing"):
+        cat.add_task(fixed(title, 12))
+
+    plan = Scheduler(make_owner(60, cat), DAY).generate_plan()
+
+    assert len(plan.warnings) == 3
+    assert len(plan.items) == 1
+
+
+def test_detect_conflicts_flags_identical_times_in_hand_edited_plan():
+    dog = Pet("Biscuit", "dog", 3)
+    scheduler = Scheduler(make_owner(60, dog), DAY)
+    plan = scheduler.generate_plan()
+    plan.items = [
+        ScheduledTask(Task("Walk", 30), dog, time(9, 0), time(9, 30)),
+        ScheduledTask(Task("Bath", 30), dog, time(9, 0), time(9, 30)),
+    ]
+
+    assert scheduler.detect_conflicts(plan) == [
+        "'Walk' (Biscuit, 09:00-09:30) overlaps 'Bath' (Biscuit, 09:00-09:30)"
+    ]
