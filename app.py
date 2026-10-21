@@ -18,39 +18,6 @@ if "owner" not in st.session_state:
 owner = st.session_state.owner
 
 st.title("🐾 PawPal+")
-
-st.markdown(
-    """
-Welcome to the PawPal+ starter app.
-
-This file is intentionally thin. It gives you a working Streamlit app so you can start quickly,
-but **it does not implement the project logic**. Your job is to design the system and build it.
-
-Use this app as your interactive demo once your backend classes/functions exist.
-"""
-)
-
-with st.expander("Scenario", expanded=True):
-    st.markdown(
-        """
-**PawPal+** is a pet care planning assistant. It helps a pet owner plan care tasks
-for their pet(s) based on constraints like time, priority, and preferences.
-
-You will design and implement the scheduling logic and connect it to this Streamlit UI.
-"""
-    )
-
-with st.expander("What you need to build", expanded=True):
-    st.markdown(
-        """
-At minimum, your system should:
-- Represent pet care tasks (what needs to happen, how long it takes, priority)
-- Represent the pet and the owner (basic info and preferences)
-- Build a plan/schedule for a day that chooses and orders tasks based on constraints
-- Explain the plan (why each task was chosen and when it happens)
-"""
-    )
-
 st.divider()
 
 st.subheader("Owner")
@@ -108,18 +75,56 @@ else:
             except ValueError as e:
                 st.error(str(e))
 
+PRIORITY_LABELS = {
+    Priority.HIGH: "🔴 High",
+    Priority.MEDIUM: "🟡 Medium",
+    Priority.LOW: "🟢 Low",
+}
+
 all_tasks = owner.get_all_tasks()
+scheduler = Scheduler(owner)
+
 if all_tasks:
-    st.write("Current tasks:")
-    st.table([
-        {
-            "pet": pet.name,
-            "title": task.title,
-            "duration_minutes": task.duration_minutes,
-            "priority": task.priority.name.lower(),
-        }
-        for pet, task in all_tasks
-    ])
+    st.markdown("#### Current tasks")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        pet_filter = st.selectbox("Show pet", ["All pets"] + [p.name for p in owner.pets])
+    with col2:
+        sort_by = st.selectbox("Sort by", ["Priority", "Duration", "Pet"])
+    with col3:
+        st.write("")  # nudge the checkbox down to line up with the selectboxes
+        due_only = st.checkbox("Due today only", value=False)
+
+    # Filter first, then sort, using the same logic the scheduler uses.
+    shown = all_tasks
+    if pet_filter != "All pets":
+        shown = [(pet, task) for pet, task in shown if pet.name == pet_filter]
+    if due_only:
+        shown = scheduler.filter_tasks(shown)
+
+    if sort_by == "Priority":
+        shown = scheduler.sort_tasks(shown)
+    elif sort_by == "Duration":
+        shown = sorted(shown, key=lambda pt: pt[1].duration_minutes)
+    else:
+        shown = sorted(shown, key=lambda pt: (pt[0].name.lower(), -pt[1].priority_score()))
+
+    if shown:
+        due_today = {id(task) for _, task in scheduler.filter_tasks(shown)}
+        st.table([
+            {
+                "Pet": pet.name,
+                "Task": task.title,
+                "Duration": f"{task.duration_minutes} min",
+                "Priority": PRIORITY_LABELS[task.priority],
+                "Due today": "✅" if id(task) in due_today else "—",
+            }
+            for pet, task in shown
+        ])
+        total = sum(task.duration_minutes for _, task in shown)
+        st.caption(f"Showing {len(shown)} of {len(all_tasks)} tasks · {total} min total")
+    else:
+        st.info("No tasks match these filters.")
 elif owner.pets:
     st.info("No tasks yet. Add one above.")
 
@@ -127,32 +132,49 @@ st.divider()
 
 st.subheader("Build Schedule")
 
-if st.button("Generate schedule"):
+if st.button("Generate schedule", type="primary"):
     if not all_tasks:
         st.warning("Add at least one task before generating a schedule.")
     else:
-        plan = Scheduler(owner).generate_plan()
+        plan = scheduler.generate_plan()
+        used = plan.total_minutes()
         st.markdown(f"**Today's schedule for {owner.name}** ({plan.plan_date.strftime('%A, %B %d')})")
 
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Scheduled", len(plan.items))
+        col2.metric("Skipped", len(plan.skipped_tasks))
+        col3.metric("Time used", f"{used} / {owner.available_minutes} min")
+        st.progress(min(used / owner.available_minutes, 1.0) if owner.available_minutes else 0.0)
+
         for warning in plan.warnings:
-            st.warning(warning)
+            st.warning(f"⚠️ {warning}")
 
         if plan.items:
+            if plan.skipped_tasks:
+                st.info(f"Scheduled {len(plan.items)} task(s); {len(plan.skipped_tasks)} didn't fit.")
+            else:
+                st.success(f"All {len(plan.items)} task(s) fit into today's schedule! 🎉")
             st.table([
                 {
-                    "time": f"{item.start_time.strftime('%H:%M')}-{item.end_time.strftime('%H:%M')}",
-                    "task": item.task.title,
-                    "pet": item.pet.name,
-                    "why": item.reason,
+                    "Time": f"{item.start_time.strftime('%H:%M')} – {item.end_time.strftime('%H:%M')}",
+                    "Task": item.task.title,
+                    "Pet": item.pet.name,
+                    "Priority": PRIORITY_LABELS[item.task.priority],
+                    "Why": item.reason,
                 }
-                for item in plan.view_tasks()
+                for item in scheduler.sort_by_time(plan.view_tasks())
             ])
         else:
-            st.info("Nothing could be scheduled today.")
+            st.error("Nothing could be scheduled today.")
 
         if plan.skipped_tasks:
-            st.markdown("**Skipped**")
-            for task, pet, reason in plan.skipped_tasks:
-                st.write(f"- {task.title} ({pet.name}): {reason}")
-
-        st.caption(f"{plan.total_minutes()} of {owner.available_minutes} available minutes used.")
+            st.markdown("#### Skipped tasks")
+            st.table([
+                {
+                    "Task": task.title,
+                    "Pet": pet.name,
+                    "Priority": PRIORITY_LABELS[task.priority],
+                    "Reason": reason,
+                }
+                for task, pet, reason in plan.skipped_tasks
+            ])

@@ -135,23 +135,23 @@ My confidence in my system based on the system's reliability based on test resul
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting |Scheduler.sort_tasks(),  Scheduler.score_tasks(), Scheduler,sort_by_time()| scores tasks, sorts tasks by priority then shortest duration; sorts tasks in order by start time |
+| Filtering | Scheduler.filter_tasks(), Task.is_due_on(), Task.is_complete_on(), Scheduler._infeasible_reason()| keeps tasks that are due on the plan date and not that area already done. Taks cannot fit in a window shorter than the task. Tasks that do not fit are skipped. |
+| Conflict handling | Scheduler.detect_time_conflicts(),  Scheduler.detect_conflicts(), Scheduler.clashes(), Scheduler.find_slot()| Displays a warning instead of crashing |
+| Recurring tasks | Task.is_due_on(), Task,next_due(), Task.next_occurance(), Task_is_overdue_on(), Scheduler.complete_task()| Tasks are either daily vs. weekly |
 
 ## 📸 Demo Walkthrough
 
 Describe your app in numbered steps so a reader can follow along without watching a video:
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+1. Enter Name: A pet owner can enter their name. For example. A user can enter their name Jane Doe in the Owner name field.   
+2. Add pets: The owner can add pets. For example, an owner can add their two-year-old dog Penny 
+3. Set Constraints: The owner can create tasks with a duration and priority. 
+4. Generate Schedule: The owner can generate a scheudle based on the set constraints. 
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+**Screenshot or video** *(optional)*: 
+![Pet](images/image1.png)
+
+![Daily Schedule](images/image2.png)
