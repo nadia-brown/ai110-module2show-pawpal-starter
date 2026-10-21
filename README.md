@@ -69,7 +69,30 @@ A Pet maintains a list of Task objects. These Tasks can include a TimeConstarint
 
 The scheduler collets taks from the owner and determines which tasks need to be completed and when they can be scheduled and creates a DailyPlan. 
 
+## Smart Scheduling 
 
+### Sorting
+Scheduler.sort_by_time(items): Organizes scheduled tasks in time order   
+
+### Filtering 
+Scheduler.filter_tasks(tasks): Filters tasks by date 
+
+### Conflict Detection 
+Scheduler.detect_time_conflicts(tasks):
+Warns when tasks have overlapping times for the same pet or different pets 
+
+Scheduler.clashes(enteries): Takes a lists of tasks and returns pairs that have taks with overlapping times. 
+
+### Recurring Task Logic 
+Task.is_due_on(day): Determines whether a tasks is due on a given day
+
+Task.next_due_date(after): Determines the next due date
+
+Task.next_occurrence(completed_on): makes a new copy of the dasks with a new due date
+
+Task.is_overdue_on(day): Determines if the due date has passed 
+
+Scheduler.complete_tasks(pet, task, on): Marks a task as complete.
 
 ## 🧪 Testing PawPal+
 

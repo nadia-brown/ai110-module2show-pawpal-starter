@@ -41,6 +41,10 @@ Yes there are logic issues. A fixed taks can be moved off it's fixed time.
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
+Removing the early exit recommendation from Claude Code. The `sortest_after = list(accumulate(reversed(...), min))[::-1]` is the most difficult line to read in the file with minimal benefit.  
+
+The early exit creates a shortcut for checking if there is enough time to complete the task. If so the task is added to the daily task list. If not it gets skipped. 
+
 ---
 
 ## 3. AI Collaboration

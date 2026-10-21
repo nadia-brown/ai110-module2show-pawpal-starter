@@ -60,9 +60,13 @@ classDiagram
         +int weekday
         +bool shareable
         +set~date~ completed_dates
+        +date due_date
         +mark_complete(on: date) None
         +is_complete_on(day: date) bool
         +is_due_on(day: date) bool
+        +is_overdue_on(day: date) bool
+        +next_due_date(after: date) date
+        +next_occurrence(completed_on: date) Task
         +has_time_constraint() bool
         +is_fixed() bool
         +priority_score() int
@@ -91,15 +95,19 @@ classDiagram
         +generate_plan() DailyPlan
         +score_task(task: Task, pet: Pet) int
         +sort_tasks(tasks: list~tuple~Pet, Task~~) list~tuple~Pet, Task~~
+        +sort_by_time(items: list~ScheduledTask~) list~ScheduledTask~
         +filter_tasks(tasks: list~tuple~Pet, Task~~) list~tuple~Pet, Task~~
+        +complete_task(pet: Pet, task: Task, on: date) Task
         +find_slot(task: Task, pet: Pet, plan: DailyPlan) time
         +detect_conflicts(plan: DailyPlan) list~str~
+        +detect_time_conflicts(tasks: list~tuple~Pet, Task~~) list~str~
     }
 
     class DailyPlan {
         +date plan_date
         +list~ScheduledTask~ items
         +list~tuple~Task, Pet, str~~ skipped_tasks
+        +list~str~ warnings
         +add_item(item: ScheduledTask) None
         +total_minutes() int
         +view_tasks() list~ScheduledTask~
